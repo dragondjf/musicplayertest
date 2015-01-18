@@ -18,7 +18,7 @@ class LRCControlWidget(QFrame):
 
     def __init__(self, parent=None):
         super(LRCControlWidget, self).__init__(parent)
-        self.setWindowFlags(Qt.WindowType_Mask | Qt.Window | Qt.FramelessWindowHint)
+        self.setWindowFlags(Qt.ToolTip | Qt.FramelessWindowHint)
         self.setAttribute(Qt.WA_Hover, True)
         self.setWindowOpacity(0)
 
@@ -84,7 +84,7 @@ class LRCLabel(QLabel):
         super(LRCLabel, self).__init__(parent)
         self.parent = parent
         # FramelessWindowHint为无边界的窗口
-        self.setWindowFlags(Qt.WindowType_Mask | Qt.SubWindow | Qt.FramelessWindowHint)
+        self.setWindowFlags(Qt.ToolTip | Qt.FramelessWindowHint)
         self.setAttribute(Qt.WA_TranslucentBackground, True)
         self.setAttribute(Qt.WA_Hover, True)
         self.setAlignment(Qt.AlignCenter)
