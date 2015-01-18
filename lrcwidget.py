@@ -5,6 +5,20 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
+from PyQt5.QtCore import pyqtSignal as Signal
+from PyQt5.QtCore import pyqtSlot as Slot
+
+
+class SignalDB(QObject):
+    
+    desktopLRC_locked = Signal(bool)
+
+    def __init__(self, parent=None):
+        super(SignalDB, self).__init__(parent)
+
+
+signalDB = SignalDB()
+
 
 class LRCControlWidget(QFrame):
 
@@ -22,14 +36,14 @@ class LRCControlWidget(QFrame):
         self.setAttribute(Qt.WA_Hover, True)
         self.setWindowOpacity(0)
 
-        self.lrc = LRCLabel(self)
+        self.lrcLabel = LRCLabel(self)
 
         self.setFixedSize(1200, 140)
-        self.lrc.setFixedSize(1000, 60)
+        self.lrcLabel.setFixedSize(1000, 60)
         self.installEventFilter(self)
 
         self.moveCenter()
-        self.lrc.move(self.pos() + QPoint((self.width() - self.lrc.width()) / 2, (self.height() - self.lrc.height()) / 2))
+        self.lrcLabel.move(self.pos() + QPoint((self.width() - self.lrcLabel.width()) / 2, (self.height() - self.lrcLabel.height()) / 2))
 
     def moveCenter(self):
         qr = self.frameGeometry()
@@ -58,27 +72,21 @@ class LRCControlWidget(QFrame):
             del self.dragPosition
 
     def mouseMoveEvent(self, event):
-        self.lrc.move(self.pos() + QPoint((self.width() - self.lrc.width()) / 2, (self.height() - self.lrc.height()) / 2))
+        self.lrcLabel.move(self.pos() + QPoint((self.width() - self.lrcLabel.width()) / 2, (self.height() - self.lrcLabel.height()) / 2))
+        self.setWindowOpacity(0.5)
         if hasattr(self, "dragPosition"):
             if event.buttons() == Qt.LeftButton:
                 self.move(event.globalPos() - self.dragPosition)
                 event.accept()
 
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_F5:
+            signalDB.desktopLRC_locked.emit(not self.lrcLabel.isLocked())
+
 
 class LRCLabel(QLabel):
 
     """docstring for LRCLabel"""
-
-    style = '''
-        QLabel#normal{
-            border: None;
-        }
-
-        QLabel#hover{
-            border: None;
-            background-color:green;
-        }
-    '''
 
     def __init__(self, parent=None):
         super(LRCLabel, self).__init__(parent)
@@ -88,7 +96,37 @@ class LRCLabel(QLabel):
         self.setAttribute(Qt.WA_TranslucentBackground, True)
         self.setAttribute(Qt.WA_Hover, True)
         self.setAlignment(Qt.AlignCenter)
+        self.installEventFilter(self)
 
+        self.initData()
+
+        self.initFlags()
+        self.initFont()
+        self.initLinearGradient()
+        self.initMaskLinearGradient()
+        self.initTimer()
+
+        self.initConnect()
+
+        self.start_lrc_mask(2000)
+        self.setText(self.tr("简易音乐播放器, dfdffd, 简易音乐播放器, dfdffd, 简易音乐播放器, dfdffd"))
+
+    def initData(self):
+        self.lrc_mask_width = 0
+        self.lrc_mask_width_interval = 0
+
+    def initFlags(self):
+        self.locked = False
+
+    def initFont(self):
+        # 设置字体
+        self.font = QFont()
+        self.font.setFamily("Times New Roman")
+        self.font.setBold(True)
+        self.font.setPointSize(30)
+        self.fontMetrics = QFontMetrics(self.font)
+
+    def initLinearGradient(self):
         # 歌词的线性渐变填充
         self.linear_gradient = QLinearGradient()
         self.linear_gradient.setStart(0, 10)  # 填充的起点坐标
@@ -98,6 +136,7 @@ class LRCLabel(QLabel):
         self.linear_gradient.setColorAt(0.5, QColor(114, 232, 255))
         self.linear_gradient.setColorAt(0.9, QColor(14, 179, 255))
 
+    def initMaskLinearGradient(self):
         # 遮罩的线性渐变填充
         self.mask_linear_gradient = QLinearGradient()
         self.mask_linear_gradient.setStart(0, 10)
@@ -106,26 +145,20 @@ class LRCLabel(QLabel):
         self.mask_linear_gradient.setColorAt(0.5, QColor(255, 72, 16))
         self.mask_linear_gradient.setColorAt(0.9, QColor(222, 54, 4))
 
-        # 设置字体
-        self.font = QFont()
-        self.font.setFamily("Times New Roman")
-        self.font.setBold(True)
-        self.font.setPointSize(30)
-
-        self.fontMetrics = QFontMetrics(self.font)
-
-        # 设置定时器
+    def initTimer(self):
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.updateLRC)
-        self.lrc_mask_width = 0
-        self.lrc_mask_width_interval = 0
-        self.start_lrc_mask(2000)
 
-        self.setObjectName("normal")
-        self.setStyleSheet(self.style)
-        self.installEventFilter(self)
+    def initConnect(self):
+        signalDB.desktopLRC_locked.connect(self.setLocked)
 
-        self.setText(self.tr("简易音乐播放器, dfdffd, 简易音乐播放器, dfdffd, 简易音乐播放器, dfdffd"))
+    def isLocked(self):
+        return self.locked
+
+    @Slot(bool)
+    def setLocked(self, flag):
+        assert isinstance(flag, bool)
+        self.locked = flag
 
     def setText(self, text):
         super(LRCLabel, self).setText(text)
@@ -150,8 +183,12 @@ class LRCLabel(QLabel):
 
     def eventFilter(self, obj, event):
         if event.type() == QEvent.HoverEnter:
-            self.parent.setWindowOpacity(0.5)
-            return True
+            if self.locked:
+                self.parent.setWindowOpacity(0)
+                return super(LRCLabel, self).eventFilter(obj, event)
+            else:
+                self.parent.setWindowOpacity(0.5)
+                return True
         else:
             return super(LRCLabel, self).eventFilter(obj, event)
 
@@ -218,13 +255,23 @@ class MainWindow(QMainWindow):
         self.button = QPushButton("LRC", self)
         self.button.clicked.connect(self.showLRC)
 
-        self.lrcLabel = LRCControlWidget(self)
+        self.lrc = LRCControlWidget(self)
+
+        self.moveCenter()
 
     def showLRC(self):
-        # self.lrcLabel.setVisible(self.lrcLabel.isVisible())
-        self.lrcLabel.show()
-        self.lrcLabel.lrc.show()
+        if self.lrc.lrcLabel.isVisible():
+            self.lrc.hide()
+            self.lrc.lrcLabel.hide()
+        else:
+            self.lrc.show()
+            self.lrc.lrcLabel.show()
 
+    def moveCenter(self):
+        qr = self.frameGeometry()
+        cp = QDesktopWidget().availableGeometry().center()
+        qr.moveCenter(cp)
+        self.move(qr.topLeft())
 
 
 if __name__ == '__main__':
