@@ -73,7 +73,7 @@ class LRCControlWidget(QFrame):
 
     def mouseMoveEvent(self, event):
         self.lrcLabel.move(self.pos() + QPoint((self.width() - self.lrcLabel.width()) / 2, (self.height() - self.lrcLabel.height()) / 2))
-        self.setWindowOpacity(0.5)
+        self.setWindowOpacity(0.3)
         if hasattr(self, "dragPosition"):
             if event.buttons() == Qt.LeftButton:
                 self.move(event.globalPos() - self.dragPosition)
@@ -186,7 +186,7 @@ class LRCLabel(QLabel):
                 self.parent.setWindowOpacity(0)
                 return super(LRCLabel, self).eventFilter(obj, event)
             else:
-                self.parent.setWindowOpacity(0.5)
+                self.parent.setWindowOpacity(0.3)
                 return True
         else:
             return super(LRCLabel, self).eventFilter(obj, event)
