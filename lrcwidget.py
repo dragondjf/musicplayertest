@@ -108,7 +108,6 @@ class LRCLabel(QLabel):
 
         self.initConnect()
 
-        self.start_lrc_mask(2000)
         self.setText(self.tr("简易音乐播放器, dfdffd, 简易音乐播放器, dfdffd, 简易音乐播放器, dfdffd"))
 
     def initData(self):
@@ -263,9 +262,11 @@ class MainWindow(QMainWindow):
         if self.lrc.lrcLabel.isVisible():
             self.lrc.hide()
             self.lrc.lrcLabel.hide()
+            self.lrc.lrcLabel.stop_lrc_mask()
         else:
             self.lrc.show()
             self.lrc.lrcLabel.show()
+            self.lrc.lrcLabel.start_lrc_mask(2000)
 
     def moveCenter(self):
         qr = self.frameGeometry()
